@@ -1,4 +1,18 @@
-**/.pytest_cache/**
-**/__pycache__/**
+.pytest_cache
+__pycache__
 .sourcer
 .python-version
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Environments
+.venv/
+
+# Project specific
+.cache/
+token.json
+
+credentials.json
