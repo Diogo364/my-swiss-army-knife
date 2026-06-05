@@ -44,48 +44,61 @@ def calculate(base_date: date, op: str, amount_str: str, unit: str) -> date:
     else:
         raise ValueError(f"Unknown unit: '{unit}'. Supported units: days, wd, working-days, weeks, months, years.")
 
-@click.command()
-@click.argument('args', nargs=-1)
+@click.command(context_settings=dict(ignore_unknown_options=True, allow_interspersed_args=True))
+@click.argument('date_or_op', required=False)
+@click.argument('op', required=False)
 @click.option('--verbose', '-v', is_flag=True, help="Include the day of the week in the output.")
-def main(args, verbose):
+def main(date_or_op, op, verbose):
     """
     Datetime Calculator CLI.
-    
-    Examples:
+
     \b
+    Usage:
+    dt-calc [DATE] OPERATION
+    dt-calc OPERATION (uses today as base date)
+
+    \b
+    Arguments:
+      DATE        Base date in YYYY-MM-DD format (defaults to today).
+      OPERATION   Quoted string: "[operator] [amount] [unit]" (e.g., "+ 15 wd").
+
+    \b
+    Supported Units:
+      day, days          Calendar days
+      wd, working-days   Working days (Monday to Friday)
+      week, weeks        Standard weeks
+      month, months      Calendar months
+      year, years        Calendar years
+
+    \b
+    Examples:
     dt-calc 2023-10-27 "+ 15 wd"
-    dt-calc -- "+ 10 days"
+    dt-calc "+ 10 days"
+    dt-calc 2023-10-27 "- 1 month"
     """
-    if not args:
+    if date_or_op is None:
         # Show help if no arguments provided
         with click.Context(main) as ctx:
             click.echo(ctx.get_help())
         return
 
     try:
-        if len(args) == 1:
+        if op is None:
+            # Only one argument provided: treat it as the operation
             base_date = date.today()
-            operation_str = args[0]
-        elif len(args) >= 2:
-            try:
-                base_date = datetime.strptime(args[0], "%Y-%m-%d").date()
-                operation_str = args[1]
-            except ValueError:
-                # If the first argument isn't a date, maybe it's just the operation 
-                # and we should use today's date? 
-                # But spec says [DATE] [OPERATION]. 
-                # Let's try to be helpful if they just passed the operation.
-                # However, if args[0] is like "+", it definitely isn't a date.
-                if re.match(r"^[+-]", args[0]):
-                    base_date = date.today()
-                    operation_str = " ".join(args)
-                else:
-                    raise click.BadParameter(f"Invalid date format: '{args[0]}'. Expected YYYY-MM-DD.")
+            operation_str = date_or_op
         else:
-            raise click.UsageError("Operation is required.")
+            # Two arguments provided: DATE and OPERATION
+            try:
+                base_date = datetime.strptime(date_or_op, "%Y-%m-%d").date()
+                operation_str = op
+            except ValueError:
+                # If the first argument isn't a date, maybe it's part of the operation?
+                # But with two arguments, we expect the first to be a date.
+                raise click.BadParameter(f"Invalid date format: '{date_or_op}'. Expected YYYY-MM-DD.")
 
-        op, amount, unit = parse_operation(operation_str)
-        result_date = calculate(base_date, op, amount, unit)
+        parsed_op, amount, unit = parse_operation(operation_str)
+        result_date = calculate(base_date, parsed_op, amount, unit)
         
         output = result_date.strftime("%Y-%m-%d")
         if verbose:

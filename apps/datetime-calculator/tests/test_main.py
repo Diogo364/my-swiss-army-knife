@@ -82,6 +82,23 @@ def test_cli_dash_dash(mocker):
     assert result.exit_code == 0
     assert "2023-11-06" in result.output
 
+def test_cli_subtraction_no_dash_dash():
+    runner = CliRunner()
+    # 2023-10-27 is a Friday. -1 working day should be Thursday (2023-10-26)
+    result = runner.invoke(main, ["2023-10-27", "- 1 wd"])
+    assert result.exit_code == 0
+    assert "2023-10-26" in result.output
+
+def test_cli_one_argument_as_op(mocker):
+    from datetime import date
+    mock_date = mocker.patch("datetime_calculator.date")
+    mock_date.today.return_value = date(2023, 10, 27)
+    
+    runner = CliRunner()
+    result = runner.invoke(main, ["+ 1 day"])
+    assert result.exit_code == 0
+    assert "2023-10-28" in result.output
+
 def test_cli_invalid_date():
     runner = CliRunner()
     result = runner.invoke(main, ["not-a-date", "+ 5 days"])
